@@ -1,105 +1,84 @@
 
 import { useEffect, useState } from 'react';
 import './App.css';
+import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
+import React from 'react'
+
+
 
 function App() {
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchInput, setSearchInput] = useState('');
+  const apiKey = process.env.REACT_APP_GOOGLE_API;
+
+  const [center, setCenter] = useState({ lat: 11.0168445, lng: 76.9558321 }); // Initial center
+  const [markers, setMarkers] = useState([]);
+  const [mapCenter, setMapCenter] = useState({ lat: 0, lng: 0 });
 
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' || e.key === 'Backspace') {
-        setShowDropdown(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
+    // Function to simulate new marker positions (replace with your logic)
+    
   }, []);
 
-  const nameList = [
-    "Sam",
-    "John",
-    "Alex",
-    "Sellar"
-  ];
 
+  console.log(center)
 
-  const handleChange = (event) => {
-    const value = event.target.value;
-    setSearchTerm(value);
-    if (value.includes('@')) {
-      setShowDropdown(true);
-    } else {
-      setShowDropdown(false);
-    }
+  useEffect(() => {
+    getLocation(setMapCenter);
+   
+    const generateNewMarker = () => {
+      const newLat = center.lat + Math.random() * 0.01; // Random offset within 0.01 degrees
+      const newLng = center.lng + Math.random() * 0.01;
+      return { lat: newLat, lng: newLng };
+    };
+
+    const intervalId = setInterval(() => {
+      const newMarker = generateNewMarker();
+
+      setMarkers([...markers, newMarker]); // Update markers with new position
+      setCenter(newMarker); // Update map center to follow marker
+    }, 5000); // Update every 5 seconds
+
+    // Cleanup function to clear interval when component unmounts
+    return () => clearInterval(intervalId);
+  }, []);
+
+  function getLocation(setMapCenter) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setMapCenter({ lat: latitude, lng: longitude });
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+      }
+    );
+  }
+
+  const containerStyle = {
+    width: '1000px',
+    height: '100vw'
   };
 
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: apiKey
+  })
 
 
-  const filteredSuggestions = nameList.filter(suggestion =>
-    suggestion.toLowerCase().includes(searchInput.toLowerCase())
-  );
 
-  return (
-    <>
-      <div className="justify-center items-center flex" >
-        <div className='flex-col'>
-          <div className='border-2 h-20 mt-4 flex items-center w-[700px]'>
-            <div className="relative" >
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={handleChange}
-                placeholder='Create a Post...'
-                className="p-2 rounded-md focus:outline-none w-[600px]"
-              />
-              {showDropdown && (
-                <ul className="absolute bg-white shadow-lg mt-1 rounded-md max-h-60 overflow-auto" >
-                  <li >
-                    <input
-                      type="text"
-                      value={searchInput}
-                      onChange={(e) => {
-                        setSearchInput(e.target.value)
-                        setShowDropdown(true)
-                      }}
-                      placeholder="Search..."
-                      className="rounded-md focus:outline-none p-2 m-2 w-44 border-2"
 
-                    />
-                  </li>
-                  {filteredSuggestions.map((suggestion, index) => (
-                    <li
-                      key={index}
-                      onClick={() => {
-                        setSearchTerm(prevSearchTerm => prevSearchTerm.replace(/@/g, '') + ' ' + suggestion);
-                        setShowDropdown(false);
-                        setSearchInput('')
-                      }}
-                      className="cursor-pointer hover:bg-gray-100 py-2 px-4 block text-purple-600 font-bold"
-                    >
-                      {suggestion}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-          </div>
-          <div className='mt-4 flex justify-end'>
-            <button className='px-8 py-2 rounded-lg border-2 bg-purple-400'>Post</button>
-          </div>
-        </div>
-      </div>
-      \
-
-    </>
-  );
+  return isLoaded ? (
+    <GoogleMap
+      mapContainerStyle={containerStyle}
+      center={center}
+      zoom={10}
+    >
+      {markers.map((marker, index) => (
+        <MarkerF key={index} position={marker} /> // Render each marker
+      ))}
+    </GoogleMap>
+  ) : <></>
 }
+
 
 export default App;
