@@ -4,7 +4,7 @@ import React from "react";
 import { io } from "socket.io-client";
 import { GoogleMap, useJsApiLoader, MarkerF } from "@react-google-maps/api";
 
-const socket = io("http://192.168.198.142:3001");
+const socket = io("http://localhost:3001");
 
 function App() {
   const [inputText, setInputText] = useState("");
