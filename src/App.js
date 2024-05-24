@@ -1,91 +1,110 @@
+import { useEffect, useState } from "react";
+import "./App.css";
+import React from "react";
+import { io } from "socket.io-client";
+import { GoogleMap, useJsApiLoader, MarkerF } from "@react-google-maps/api";
 
-import { useEffect, useState } from 'react';
-import './App.css';
-
-import React from 'react'
-import { io } from 'socket.io-client'
-
-
-
-const socket = io('http://localhost:3001')
-
+const socket = io("http://192.168.198.142:3001");
 
 function App() {
+  const [inputText, setInputText] = useState("");
+  const [socketMessage, setSocketMessage] = useState([]);
+  const [markers, setMarkers] = useState();
+
+  const apiKey = process.env.REACT_APP_GOOGLE_API;
 
   useEffect(() => {
+    const handleReceiveMessage = (data) => {
+      setSocketMessage((prev) => [...prev, data.message]);
+      const jsonString = data.message?.replace(/(\w+):/g, '"$1":');
+      // Parse the JSON string to an object
+      const convetToObject = JSON.parse(jsonString);
+      setMarkers(convetToObject);
+    };
 
-    socket.on('receive_latLong', (data) => {
-      console.log(data)
-    })
+    socket.on("receive_message", handleReceiveMessage);
+    // Cleanup function to remove the listener when the component unmounts
+    return () => {
+      socket.off("receive_message", handleReceiveMessage);
+    };
+  }, []);
 
+  const sendMessage = () => {
+    socket.emit("send_message", { message: inputText });
+    setInputText("");
+  };
 
+  const { isLoaded } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: apiKey,
+  });
 
-
-  }, [])
-  return (
-
-    <div>
-
-
-    </div>
-  )
+  const containerStyle = {
+    width: "1000px",
+    height: "1000px",
+  };
+  return isLoaded ? (
+    <>
+      <div className="flex justify-center my-12">
+        <input
+          placeholder="Enter Message..."
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          className="border-2 px-2 mr-2"
+        />
+        <button
+          className="border-2 bg-green-500 rounded-lg px-4 py-2"
+          onClick={sendMessage}
+        >
+          Send Message
+        </button>
+      </div>
+      <h1 className="justify-center flex">{socketMessage}</h1>
+      <GoogleMap
+        mapContainerStyle={containerStyle}
+        center={{ lat: 0, lng: 0 }}
+        zoom={10}
+      >
+        <MarkerF position={markers} />
+      </GoogleMap>
+    </>
+  ) : (
+    <></>
+  );
 }
-
 
 export default App;
 
+// import { useEffect, useState } from 'react';
+// import './App.css';
+
+// import React from 'react'
+// import { io } from 'socket.io-client'
+// import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
+
+// const socket = io('http://localhost:3001')
 
 // function App() {
-//   const apiKey = process.env.REACT_APP_GOOGLE_API;
 
-//   const [center, setCenter] = useState({ lat: 11.0168445, lng: 76.9558321 }); // Initial center
+//   const [center, setCenter] = useState({ lat: 0, lng: 0 }); // Initial center
 //   const [markers, setMarkers] = useState([]);
-//   const [mapCenter, setMapCenter] = useState({ lat: 0, lng: 0 });
-
-
-//   useEffect(() => {
-//     // Function to simulate new marker positions (replace with your logic)
-    
-//   }, []);
-
-
-//   console.log(center)
+//   const [inputText, setInputText] = useState({ lat: 0, lng: 0 });
+//   const [socketMessage, setSocketMessage] = useState();
 
 //   useEffect(() => {
-//     getLocation(setMapCenter);
-   
-//     const generateNewMarker = () => {
-//       const newLat = center.lat + Math.random() * 0.01; // Random offset within 0.01 degrees
-//       const newLng = center.lng + Math.random() * 0.01;
-//       return { lat: newLat, lng: newLng };
-//     };
+//     socket.on('receive_message', (data) => {
+//       console.log(data)
+//       setMarkers([data.message])
+//       setSocketMessage(data.message)
 
-//     const intervalId = setInterval(() => {
-//       const newMarker = generateNewMarker();
+//     })
 
-//       setMarkers([...markers, newMarker]); // Update markers with new position
-//       setCenter(newMarker); // Update map center to follow marker
-//     }, 5000); // Update every 5 seconds
-
-//     // Cleanup function to clear interval when component unmounts
-//     return () => clearInterval(intervalId);
-//   }, []);
-
-//   function getLocation(setMapCenter) {
-//     navigator.geolocation.getCurrentPosition(
-//       (position) => {
-//         const { latitude, longitude } = position.coords;
-//         setMapCenter({ lat: latitude, lng: longitude });
-//       },
-//       (error) => {
-//         console.error("Error getting location:", error);
-//       }
-//     );
-//   }
+//   }, [socket])
+//   const apiKey = process.env.REACT_APP_GOOGLE_API;
 
 //   const containerStyle = {
 //     width: '1000px',
-//     height: '100vw'
+//     height: '1000px'
 //   };
 
 //   const { isLoaded } = useJsApiLoader({
@@ -93,18 +112,35 @@ export default App;
 //     googleMapsApiKey: apiKey
 //   })
 
+//   const sendMessage = () => {
 
+//     socket.emit('send_message',{message:inputText})
+//   }
 
+// console.log(markers)
 
 //   return isLoaded ? (
-//     <GoogleMap
+//     <>
+//      <div className='flex justify-center my-12'>
+//         <input placeholder='Enter Message...' onChange={(e) => setInputText(e.target.value)} className='border-2 px-2 mr-2' />
+//         <button className='border-2 bg-green-500 rounded-lg px-4 py-2' onClick={sendMessage}>Send Message</button>
+//       </div>
+//       <h1 className='justify-center flex'>{socketMessage}</h1>
+//     {/* <GoogleMap
 //       mapContainerStyle={containerStyle}
 //       center={center}
 //       zoom={10}
 //     >
-//       {markers.map((marker, index) => (
-//         <MarkerF key={index} position={marker} /> // Render each marker
-//       ))}
-//     </GoogleMap>
+//       {markers.map((marker, index) => {
+//         console.log(marker)
+//         return (
+//         <MarkerF key={index} position={marker} />) // Render each marker
+// })}
+//     </GoogleMap> */}
+//   </>
+
 //   ) : <></>
+
 // }
+
+// export default App
